@@ -56,6 +56,17 @@ func (this *HomeDB) FreshLastUseTime() {
 	this.LastUseTime = time.Now()
 }
 
+func NewDbMysql(host string, port int, user string, password string, dbname string) *DbMysql {
+    this := new(DbMysql)
+    this.Info = make(map[string]interface{})
+    this.Info["host"] = host
+    this.Info["user"] = user
+    this.Info["password"] = password
+    this.Info["port"] = port
+    this.Info["dbname"] = dbname
+    return this
+}
+
 // 数据库连接
 func (this *DbMysql) Connect() error {
 	if MysqlDbMap == nil {
@@ -87,6 +98,11 @@ func (this *DbMysql) Connect() error {
 
 func (this *DbMysql) Ping() error {
     return this.DB.Ping()
+}
+
+// 设置连接自动关闭时间,如果一个连接在t秒内没有任何操作将会被自动关闭掉
+func (this *DbMysql) SetAutoCloseTime(t int) {
+    AutoCloseTime = t
 }
 
 func (this *DbMysql) Conf(host, user, password string, port int, dbname string) {
@@ -524,17 +540,6 @@ func (this *DbMysql) clear() {
 	this.order = ""
 	this.limit = ""
 	this.condition = nil
-}
-
-func NewDbMysql(host string, port int, user string, password string, dbname string) *DbMysql {
-	this := new(DbMysql)
-	this.Info = make(map[string]interface{})
-	this.Info["host"] = host
-	this.Info["user"] = user
-	this.Info["password"] = password
-	this.Info["port"] = port
-	this.Info["dbname"] = dbname
-	return this
 }
 
 type Condition struct {

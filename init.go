@@ -3,6 +3,10 @@ import (
 	"time"
 )
 
+var (
+    AutoCloseTime = 100
+)
+
 func init ()  {
 	// 监听mysql连接, 释放长时间没有使用的连接
 	go func() {
