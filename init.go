@@ -10,7 +10,7 @@ func init ()  {
 			if MysqlDbMap != nil {
 				for dataSourceName, homeDb :=  range MysqlDbMap {
 					diffTime := int(time.Now().Unix() - homeDb.LastUseTime.Unix())
-					if diffTime > 30 {
+					if homeDb.AutoCloseTime > 0 && diffTime > homeDb.AutoCloseTime {
 						homeDb.Close()
                         homeDb.IsClose = true
 						homeDb = nil
@@ -21,17 +21,4 @@ func init ()  {
             time.Sleep(time.Second * 10)
 		}
 	}()
-    go func() {
-        if RedisMap != nil {
-            for addr, homeRedis :=  range RedisMap {
-                diffTime := int(time.Now().Unix() - homeRedis.LastUseTime.Unix())
-                if diffTime > 100 {
-                    homeRedis.Close()
-                    homeRedis = nil
-                    delete(RedisMap, addr)
-                }
-            }
-        }
-        time.Sleep(time.Second * 10)
-    }()
 }
