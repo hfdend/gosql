@@ -17,6 +17,7 @@ type HomeDB struct {
 	*sql.DB
 	LastUseTime		time.Time
     IsClose         bool
+    AutoCloseTime   int
 }
 
 type Pager struct {
@@ -38,7 +39,7 @@ type LastSql struct {
 type DbMysql struct {
 	DB				*HomeDB
 	LastSql			*LastSql
-	Info			map[string]interface{}
+	Info			map[int]interface{}
 	tableName		string
 	wTableName		string
 	selectFields	string
@@ -56,14 +57,28 @@ func (this *HomeDB) FreshLastUseTime() {
 	this.LastUseTime = time.Now()
 }
 
+const (
+    G_Host = iota
+    G_User
+    G_Password
+    G_Port
+    G_DbName
+    G_AutoCloseTime
+    G_MaxOpenConns
+    G_MaxIdleConns
+)
+
 func NewDbMysql(host string, port int, user string, password string, dbname string) *DbMysql {
     this := new(DbMysql)
-    this.Info = make(map[string]interface{})
-    this.Info["host"] = host
-    this.Info["user"] = user
-    this.Info["password"] = password
-    this.Info["port"] = port
-    this.Info["dbname"] = dbname
+    this.Info = make(map[int]interface{})
+    this.Info[G_Host] = host
+    this.Info[G_User] = user
+    this.Info[G_Password] = password
+    this.Info[G_Port] = port
+    this.Info[G_DbName] = dbname
+    this.Info[G_AutoCloseTime] = 100
+    this.Info[G_MaxOpenConns] = 30
+    this.Info[G_MaxIdleConns] = 0
     return this
 }
 
@@ -75,7 +90,7 @@ func (this *DbMysql) Connect() error {
 	if this.DB != nil && !this.DB.IsClose {
 		return nil
 	}
-	dataSourceName := fmt.Sprintf("%s:%s@(%s:%d)/%s", this.Info["user"], this.Info["password"], this.Info["host"], this.Info["port"], this.Info["dbname"])
+	dataSourceName := fmt.Sprintf("%s:%s@(%s:%d)/%s", this.Info[G_User], this.Info[G_Password], this.Info[G_Host], this.Info[G_Port], this.Info[G_DbName])
 	if homeDb, ok := MysqlDbMap[dataSourceName]; ok {
 		homeDb.FreshLastUseTime()
 		this.DB = homeDb
@@ -89,8 +104,10 @@ func (this *DbMysql) Connect() error {
 	if err != nil {
 		return err
 	}
-	homeDb := &HomeDB{db, time.Now(), false}
-	homeDb.SetMaxOpenConns(30)
+	homeDb := &HomeDB{DB: db, LastUseTime: time.Now(), IsClose: false}
+	homeDb.SetMaxOpenConns(this.Info[G_MaxOpenConns].(int))
+    homeDb.SetMaxIdleConns(this.Info[G_MaxIdleConns].(int))
+    homeDb.AutoCloseTime = this.Info[G_AutoCloseTime].(int)
 	MysqlDbMap[dataSourceName] = homeDb
 	this.DB = homeDb
     return nil
@@ -102,16 +119,24 @@ func (this *DbMysql) Ping() error {
 
 // 设置连接自动关闭时间,如果一个连接在t秒内没有任何操作将会被自动关闭掉
 func (this *DbMysql) SetAutoCloseTime(t int) {
-    AutoCloseTime = t
+    this.Info[G_AutoCloseTime] = t
 }
 
-func (this *DbMysql) Conf(host, user, password string, port int, dbname string) {
-	this.Info = make(map[string]interface{})
-	this.Info["host"] = host
-	this.Info["user"] = user
-	this.Info["password"] = password
-	this.Info["port"] = port
-	this.Info["dbname"] = dbname
+func (this *DbMysql) SetMaxIdleConns(t int) {
+    this.Info[G_MaxIdleConns] = t
+}
+
+func (this *DbMysql) SetMaxOpenConns(t int) {
+    this.Info[G_MaxOpenConns] = t
+}
+
+func (this *DbMysql) Conf(host, port int, user, password string, dbname string) {
+	this.Info = make(map[int]interface{})
+	this.Info[G_Host] = host
+	this.Info[G_User] = user
+	this.Info[G_Password] = password
+	this.Info[G_Port] = port
+	this.Info[G_DbName] = dbname
 }
 
 /**
@@ -276,18 +301,18 @@ func (this *DbMysql) QueryOne(sql string, args ...interface{}) (Value, error) {
     }
 }
 
-func (this *DbMysql) Update(data map[string]string) (int, error) {
-	sql, exeArgs := this.getUpdateSql(data)
+func (this *DbMysql) Update(data map[string]interface{}) (int, error) {
+	sql, exeArgs := this.getUpdateSql(toString(data))
 	return this.Exec(sql, exeArgs...)
 }
 
-func (this *DbMysql) Insert(data map[string]string) (int, error) {
-	sql, exeArgs := this.getInsertSql(data)
+func (this *DbMysql) Insert(data map[string]interface{}) (int, error) {
+	sql, exeArgs := this.getInsertSql(toString(data))
 	return this.Exec(sql, exeArgs...)
 }
 
-func (this *DbMysql) InsertIgnore(data map[string]string) (int, error) {
-	sql, exeArgs := this.getInsertSql(data)
+func (this *DbMysql) InsertIgnore(data map[string]interface{}) (int, error) {
+	sql, exeArgs := this.getInsertSql(toString(data))
 	sql = strings.Replace(sql, "insert into", "insert ignore into", -1)
 	return this.Exec(sql, exeArgs...)
 }
@@ -638,4 +663,30 @@ func NewPager() *Pager {
 	p := new(Pager)
 	p.Limit = 20
 	return p
+}
+
+func toString(data map[string]interface{}) map[string]string {
+    val := map[string]string{}
+    var f = func(v interface{}) string {
+        s := ""
+        switch v.(type) {
+        case string:
+            s = v.(string)
+        case int:
+            s = strconv.Itoa(v.(int))
+        case int8:
+            s = strconv.Itoa(int(v.(int8)))
+        case int16:
+            s = strconv.Itoa(int(v.(int16)))
+        case int32:
+            s = strconv.Itoa(int(v.(int32)))
+        case int64:
+            s = strconv.FormatInt(v.(int64), 10)
+        }
+        return s
+    }
+    for k, v := range data {
+        val[k] = f(v)
+    }
+    return val
 }
