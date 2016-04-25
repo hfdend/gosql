@@ -1,7 +1,7 @@
 # gosql 一个简单的sql语句封装
-
+---
 ### 列子
-#### 创建连接,连接池配置与设置表名称
+### 创建连接,连接池配置与设置表名称
 ```Go
 // 建立连接
 m := NewDbMysql("127.0.0.1", 3306, "root", "", "test")
@@ -15,7 +15,7 @@ m.SetAutoCloseTime(100)
 m.SetTableName("user")
 ```
 
-#### 数据插入
+### 数据插入
 ```Go
 // 数据插入
 data := map[string]interface{} {
@@ -27,4 +27,19 @@ data := map[string]interface{} {
 id, e := m.Insert(data);
 log.Println(e)
 fmt.Println(id)
+```
+
+### 查询
+```Go
+condition := m.NewCondition()
+condition.SetFilter("Id", 3)
+condition.SetFilter("sex", 1)
+condition.SetFilterEx("age", ">", 20)
+
+// sql: select * from `user` where `Id` = 3 and `sex` = 1 and `age` > 20
+r, e := m.SetCondition(condition).FindAll()
+
+fmt.Println(e)
+fmt.Println(r)
+fmt.Println(m.LastSql)
 ```
