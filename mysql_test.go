@@ -43,10 +43,10 @@ func Test_Find(t *testing.T) {
     m.SetTableName("user")
 
     condition := m.NewCondition()
-    condition.SetFilter("Id", 3)
-    condition.SetFilter("sex", 1)
-    condition.SetFilterEx("age", ">", 20)
+    c1 := m.NewCondition().SetFilter("Id", 3)
+    c2 := m.NewCondition().SetFilter("Id", 4).SetFilterEx("Age", ">", 20)
 
+    condition.SetFilterOr(c1, c2)
     r, e := m.SetCondition(condition).FindAll()
     fmt.Println(e)
     fmt.Println(r)

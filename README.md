@@ -29,7 +29,7 @@ log.Println(e)
 fmt.Println(id)
 ```
 
-### 查询
+### 查询 AND
 ```Go
 condition := m.NewCondition()
 condition.SetFilter("Id", 3)
@@ -43,3 +43,6 @@ fmt.Println(e)
 fmt.Println(r)
 fmt.Println(m.LastSql)
 ```
+
+### 查询OR
+
