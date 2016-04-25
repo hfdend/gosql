@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Gosql by hfdend</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Gosql</h1>
+      <h2 class="project-tagline">golang mysql dml</h2>
+      <a href="https://github.com/hfdend/gosql" class="btn">View on GitHub</a>
+      <a href="https://github.com/hfdend/gosql/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/hfdend/gosql/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="gosql-一个简单的sql-dml语句封装" class="anchor" href="#gosql-%E4%B8%80%E4%B8%AA%E7%AE%80%E5%8D%95%E7%9A%84sql-dml%E8%AF%AD%E5%8F%A5%E5%B0%81%E8%A3%85" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>gosql 一个简单的SQL DML语句封装</h1>
+
+<hr>
+
+<h3>
+<a id="列子" class="anchor" href="#%E5%88%97%E5%AD%90" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>列子</h3>
+
+<h3>
+<a id="创建连接连接池配置与设置表名称" class="anchor" href="#%E5%88%9B%E5%BB%BA%E8%BF%9E%E6%8E%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E9%85%8D%E7%BD%AE%E4%B8%8E%E8%AE%BE%E7%BD%AE%E8%A1%A8%E5%90%8D%E7%A7%B0" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>创建连接,连接池配置与设置表名称</h3>
+
+<div class="highlight highlight-source-go"><pre><span class="pl-c">// 建立连接</span>
+<span class="pl-smi">m</span> <span class="pl-k">:=</span> <span class="pl-c1">NewDbMysql</span>(<span class="pl-s"><span class="pl-pds">"</span>127.0.0.1<span class="pl-pds">"</span></span>, <span class="pl-c1">3306</span>, <span class="pl-s"><span class="pl-pds">"</span>root<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>test<span class="pl-pds">"</span></span>)
+<span class="pl-c">// 设置最大连接数</span>
+m.<span class="pl-smi">DB</span>.<span class="pl-c1">SetMaxOpenConns</span>(<span class="pl-c1">30</span>)
+<span class="pl-c">// SetMaxIdleConns sets the maximum number of connections in the idle</span>
+m.<span class="pl-smi">DB</span>.<span class="pl-c1">SetMaxIdleConns</span>(<span class="pl-c1">10</span>)
+<span class="pl-c">// 设置连接自动关闭时间,如果一个连接在100秒内没有任何操作将会被自动关闭掉; 注意:如果一个SQL在100秒内没有执行完毕也会被关闭掉</span>
+m.<span class="pl-c1">SetAutoCloseTime</span>(<span class="pl-c1">100</span>)
+<span class="pl-c">// 设置表名</span>
+m.<span class="pl-c1">SetTableName</span>(<span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>)</pre></div>
+
+<h3>
+<a id="数据插入" class="anchor" href="#%E6%95%B0%E6%8D%AE%E6%8F%92%E5%85%A5" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>数据插入</h3>
+
+<div class="highlight highlight-source-go"><pre><span class="pl-c">// 数据插入</span>
+<span class="pl-smi">data</span> <span class="pl-k">:=</span> <span class="pl-k">map</span>[<span class="pl-k">string</span>]<span class="pl-k">interface</span>{} {
+    <span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>张三<span class="pl-pds">"</span></span>,
+    <span class="pl-s"><span class="pl-pds">"</span>sex<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>1<span class="pl-pds">"</span></span>,
+    <span class="pl-s"><span class="pl-pds">"</span>age<span class="pl-pds">"</span></span>: <span class="pl-c1">56</span>,
+    <span class="pl-s"><span class="pl-pds">"</span>hobbies<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>乒乓球<span class="pl-pds">"</span></span>,
+}
+<span class="pl-smi">id</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">Insert</span>(data);
+log.<span class="pl-c1">Println</span>(e)
+fmt.<span class="pl-c1">Println</span>(id)</pre></div>
+
+<h3>
+<a id="查询-and" class="anchor" href="#%E6%9F%A5%E8%AF%A2-and" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>查询 AND</h3>
+
+<div class="highlight highlight-source-go"><pre><span class="pl-smi">condition</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
+condition.<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>Id<span class="pl-pds">"</span></span>, <span class="pl-c1">3</span>)
+condition.<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>sex<span class="pl-pds">"</span></span>, <span class="pl-c1">1</span>)
+condition.<span class="pl-c1">SetFilterEx</span>(<span class="pl-s"><span class="pl-pds">"</span>age<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>&gt;<span class="pl-pds">"</span></span>, <span class="pl-c1">20</span>)
+
+<span class="pl-c">// sql: select * from `user` where `Id` = 3 and `sex` = 1 and `age` &gt; 20</span>
+<span class="pl-smi">r</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">SetCondition</span>(condition).<span class="pl-c1">FindAll</span>()
+
+fmt.<span class="pl-c1">Println</span>(e)
+fmt.<span class="pl-c1">Println</span>(r)
+fmt.<span class="pl-c1">Println</span>(m.<span class="pl-smi">LastSql</span>)</pre></div>
+
+<h3>
+<a id="查询or" class="anchor" href="#%E6%9F%A5%E8%AF%A2or" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>查询OR</h3>
+
+<div class="highlight highlight-source-go"><pre><span class="pl-smi">condition</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
+<span class="pl-smi">c1</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>().<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>Id<span class="pl-pds">"</span></span>, <span class="pl-c1">3</span>)
+<span class="pl-smi">c2</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>().<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>Id<span class="pl-pds">"</span></span>, <span class="pl-c1">4</span>)
+c2.<span class="pl-c1">SetFilterEx</span>(<span class="pl-s"><span class="pl-pds">"</span>Age<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>&gt;<span class="pl-pds">"</span></span>, <span class="pl-c1">20</span>)
+
+condition.<span class="pl-c1">SetFilterOr</span>(c1, c2)
+<span class="pl-c">// sql: select * from `user` where (`Id` = 3) or (`Id` = 4 and `Age` &gt; 20)</span>
+<span class="pl-smi">r</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">SetCondition</span>(condition).<span class="pl-c1">FindAll</span>()
+fmt.<span class="pl-c1">Println</span>(e)
+fmt.<span class="pl-c1">Println</span>(r)
+fmt.<span class="pl-c1">Println</span>(m.<span class="pl-smi">LastSql</span>)</pre></div>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/hfdend/gosql">Gosql</a> is maintained by <a href="https://github.com/hfdend">hfdend</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
