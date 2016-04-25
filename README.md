@@ -1,7 +1,7 @@
 # gosql 一个简单的sql语句封装
 
 ### 列子
-1. 创建连接,连接池配置与设置表名称
+#### 创建连接,连接池配置与设置表名称
 ```Go
 // 建立连接
 m := NewDbMysql("127.0.0.1", 3306, "root", "", "test")
@@ -15,7 +15,7 @@ m.SetAutoCloseTime(100)
 m.SetTableName("user")
 ```
 
-1. 数据插入
+#### 数据插入
 ```Go
 // 数据插入
 data := map[string]interface{} {
