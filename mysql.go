@@ -526,7 +526,7 @@ func (this *DbMysql) clear() {
 	this.condition = nil
 }
 
-func NewDbMysql(host string, user string, password string, port int, dbname string) *DbMysql {
+func NewDbMysql(host string, port int, user string, password string, dbname string) *DbMysql {
 	this := new(DbMysql)
 	this.Info = make(map[string]interface{})
 	this.Info["host"] = host
