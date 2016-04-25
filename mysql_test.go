@@ -44,7 +44,8 @@ func Test_Find(t *testing.T) {
 
     condition := m.NewCondition()
     c1 := m.NewCondition().SetFilter("Id", 3)
-    c2 := m.NewCondition().SetFilter("Id", 4).SetFilterEx("Age", ">", 20)
+    c2 := m.NewCondition().SetFilter("Id", 4)
+    c2.SetFilterEx("Age", ">", 20)
 
     condition.SetFilterOr(c1, c2)
     r, e := m.SetCondition(condition).FindAll()
