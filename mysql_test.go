@@ -3,6 +3,7 @@ package db
 import (
     "testing"
     "fmt"
+    "github.com/go-sql-driver/mysql"
 )
 
 type Model struct {
@@ -15,11 +16,12 @@ type Model struct {
 }
 
 func Test_Mysql(t *testing.T)  {
-    var m []Model
-    mysql := NewDbMysql("127.0.0.1", 3306, "root", "", "test")
-    mysql.SetTableName("Sichuan")
-    v, e := mysql.Limit(10).Order("Id desc").FindAll()
+    var models []Model
+    m := NewDbMysql("127.0.0.1", 3306, "root", "", "test")
+    m.SetTableName("Sichuan")
+    v, e := m.Limit(10).Order("Id desc").FindAll()
+    m.Where(map[string])
     fmt.Println(e)
-    v.Scan(&m)
+    v.Scan(&models)
     fmt.Printf("%#v\n", m)
 }
