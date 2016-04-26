@@ -1,4 +1,4 @@
-package db
+package gosql
 
 import (
 	_ "github.com/go-sql-driver/mysql"
@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-var MysqlDbMap map[string]*HomeDB
+var MysqlDbMap map[string]*DB
 
-type HomeDB struct {
+type DB struct {
 	*sql.DB
 	LastUseTime		time.Time
     IsClose         bool
@@ -37,7 +37,7 @@ type LastSql struct {
  * Mysql数据库操作.
  */
 type DbMysql struct {
-	DB				*HomeDB
+	DB				*DB
 	LastSql			*LastSql
 	Info			map[int]interface{}
 	tableName		string
@@ -53,7 +53,7 @@ type DbMysql struct {
 	noClear			bool
 }
 
-func (this *HomeDB) FreshLastUseTime() {
+func (this *DB) FreshLastUseTime() {
 	this.LastUseTime = time.Now()
 }
 
@@ -85,15 +85,15 @@ func NewDbMysql(host string, port int, user string, password string, dbname stri
 // 数据库连接
 func (this *DbMysql) Connect() error {
 	if MysqlDbMap == nil {
-		MysqlDbMap = make(map[string]*HomeDB)
+		MysqlDbMap = make(map[string]*DB)
 	}
 	if this.DB != nil && !this.DB.IsClose {
 		return nil
 	}
 	dataSourceName := fmt.Sprintf("%s:%s@(%s:%d)/%s", this.Info[G_User], this.Info[G_Password], this.Info[G_Host], this.Info[G_Port], this.Info[G_DbName])
-	if homeDb, ok := MysqlDbMap[dataSourceName]; ok {
-		homeDb.FreshLastUseTime()
-		this.DB = homeDb
+	if DB, ok := MysqlDbMap[dataSourceName]; ok {
+		DB.FreshLastUseTime()
+		this.DB = DB
 		return nil
 	}
 	db, err := sql.Open("mysql", dataSourceName)
@@ -104,12 +104,12 @@ func (this *DbMysql) Connect() error {
 	if err != nil {
 		return err
 	}
-	homeDb := &HomeDB{DB: db, LastUseTime: time.Now(), IsClose: false}
-	homeDb.SetMaxOpenConns(this.Info[G_MaxOpenConns].(int))
-    homeDb.SetMaxIdleConns(this.Info[G_MaxIdleConns].(int))
-    homeDb.AutoCloseTime = this.Info[G_AutoCloseTime].(int)
-	MysqlDbMap[dataSourceName] = homeDb
-	this.DB = homeDb
+	DB := &DB{DB: db, LastUseTime: time.Now(), IsClose: false}
+	DB.SetMaxOpenConns(this.Info[G_MaxOpenConns].(int))
+    DB.SetMaxIdleConns(this.Info[G_MaxIdleConns].(int))
+    DB.AutoCloseTime = this.Info[G_AutoCloseTime].(int)
+	MysqlDbMap[dataSourceName] = DB
+	this.DB = DB
     return nil
 }
 
