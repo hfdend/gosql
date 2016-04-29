@@ -5,33 +5,70 @@ import (
     "strconv"
 )
 
-type Value map[string]string
+type Values interface {
+    Scan(interface{})
+    Result()        []map[string]string
+    ResultValue()   []Value
+}
 
-type Values []Value
+type Value interface {
+    Scan(interface{})
+    Result()    map[string]string
+}
 
-func (this *Values) Scan(v interface{})  {
+type Row map[string]string
+
+type Rows []*Row
+
+func (this *Rows) Scan(v interface{})  {
     rvs := reflect.ValueOf(v)
     if rvs.Kind() != reflect.Ptr || !rvs.IsValid() {
         return
     }
-    slice := reflect.MakeSlice(rvs.Type().Elem(), len(*this), len(*this))
+    slice := reflect.MakeSlice(rvs.Elem().Type(), len(*this), len(*this))
     for i,  value := range *this {
         rv := slice.Index(i)
-        value.SetValueOf(rv)
+        if rv.Kind() == reflect.Ptr {
+            s := reflect.New(rv.Type().Elem())
+            value.setValueOf(s)
+            rv.Set(s)
+        } else {
+            value.setValueOf(rv)
+        }
     }
     rvs.Elem().Set(slice)
 }
 
-func (this *Value) Scan(v interface{})  {
+func (this *Rows) Result() []map[string]string {
+    result := make([]map[string]string, len(*this))
+    for i, value := range *this {
+        result[i] = value.Result()
+    }
+    return result
+}
+
+func (this *Rows) ResultValue() []Value {
+    valueAry := make([]Value, len(*this))
+    for i, v := range *this {
+        valueAry[i] = v
+    }
+    return valueAry
+}
+
+func (this *Row) Scan(v interface{})  {
     rvs := reflect.ValueOf(v)
     rts := rvs.Type()
     if rts.Kind() != reflect.Ptr || rvs.IsNil() {
         return
     }
-    this.SetValueOf(rvs)
+    this.setValueOf(rvs)
 }
 
-func (this *Value) SetValueOf(rvs reflect.Value) {
+func (this *Row) Result() map[string]string {
+    return map[string]string(*this)
+}
+
+func (this *Row) setValueOf(rvs reflect.Value) {
     rts := rvs.Type()
     if rvs.Kind() == reflect.Ptr {
         rvs = rvs.Elem()
@@ -67,10 +104,32 @@ func (this *Value) SetValueOf(rvs reflect.Value) {
                 case reflect.Int64:
                     v, _ := strconv.ParseInt(valueString, 10, 64)
                     rv.SetInt(v)
+                case reflect.Uint:
+                    v, _ := strconv.ParseUint(valueString, 10, 64)
+                    rv.Set(reflect.ValueOf(uint(v)))
+                case reflect.Uint8:
+                    v, _ := strconv.ParseUint(valueString, 10, 8)
+                    rv.Set(reflect.ValueOf(uint8(v)))
+                case reflect.Uint16:
+                    v, _ := strconv.ParseUint(valueString, 10, 16)
+                    rv.Set(reflect.ValueOf(uint16(v)))
+                case reflect.Uint32:
+                    v, _ := strconv.ParseUint(valueString, 10, 32)
+                    rv.Set(reflect.ValueOf(uint32(v)))
+                case reflect.Uint64:
+                    v, _ := strconv.ParseUint(valueString, 10, 64)
+                    rv.Set(reflect.ValueOf(uint64(v)))
                 case reflect.Bool:
                     v, _ := strconv.ParseBool(valueString)
                     rv.Set(reflect.ValueOf(v))
+                case reflect.Float64:
+                    v, _ := strconv.ParseFloat(valueString, 64)
+                    rv.Set(reflect.ValueOf(v))
+                case reflect.Float32:
+                    v, _ := strconv.ParseFloat(valueString, 32)
+                    rv.Set(reflect.ValueOf(float32(v)))
                 }
+
             }
         }
     }

@@ -4,6 +4,7 @@ import (
     "testing"
     "fmt"
     "log"
+    "time"
 )
 
 func Test_Mysql(t *testing.T)  {
@@ -30,6 +31,15 @@ func Test_Mysql(t *testing.T)  {
     fmt.Println(id)
 }
 
+type User struct {
+    Id      string      `field:"Id"`
+    User    string      `field:"user"`
+    Sex     string      `field:"sex"`
+    Age     string      `field:"age"`
+    Hobbies string      `field:"hobbies"`
+    Price   uint     `field:"price"`
+}
+
 func Test_Find(t *testing.T) {
     // 建立连接
     m := NewDbMysql("127.0.0.1", 3306, "root", "", "test")
@@ -40,16 +50,25 @@ func Test_Find(t *testing.T) {
     // 设置连接自动关闭时间,如果一个连接在100秒内没有任何操作将会被自动关闭掉; 注意:如果一个SQL在100秒内没有执行完毕也会被关闭掉
     m.SetAutoCloseTime(100)
     // 设置表面
+
+
+
     m.SetTableName("user")
 
-    condition := m.NewCondition()
-    c1 := m.NewCondition().SetFilter("Id", 3)
-    c2 := m.NewCondition().SetFilter("Id", 4)
-    c2.SetFilterEx("Age", ">", 20)
+    for i := 0; i < 1; i++ {
+        r, e := m.SetCondition(nil).FindAll()
+        fmt.Println(e)
 
-    condition.SetFilterOr(c1, c2)
-    r, e := m.SetCondition(condition).FindAll()
-    fmt.Println(e)
-    fmt.Println(r)
-    fmt.Println(m.LastSql)
+        var data []*User
+        r.Scan(&data)
+        for _, v := range data {
+            fmt.Println(v)
+        }
+        fmt.Println(m.LastSql)
+
+        time.Sleep(10 * time.Second)
+    }
+
+
 }
+

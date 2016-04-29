@@ -282,7 +282,7 @@ func (this *DbMysql) CountUseSubqueries() (int, error) {
     if err != nil {
         return num, err
     }
-    if v, ok := result["num"]; ok {
+    if v, ok := result.Result()["num"]; ok {
         num, _ = strconv.Atoi(v)
     }
     return num, nil
@@ -295,7 +295,7 @@ func (this *DbMysql) Count() (int, error) {
     if err != nil {
         return num, err
     }
-    if v, ok := result["num"]; ok {
+    if v, ok := result.Result()["num"]; ok {
         num, _ = strconv.Atoi(v)
     }
     return num, nil
@@ -316,9 +316,9 @@ func (this *DbMysql) QueryOne(sql string, args ...interface{}) (Value, error) {
     if err != nil {
         return nil, err
     }
-    result := Value{}
-    if len(ary) > 0 {
-        result = ary[0]
+    results := ary.ResultValue()
+    if len(results) > 0 {
+        result := results[0]
         return result, nil
     } else {
         return nil, nil
@@ -546,19 +546,19 @@ func (this *DbMysql) rowsToAry(rows *sql.Rows) (Values, error) {
     for i := range values {
         scanArgs[i] = &values[i]
     }
-    result := Values{}
+    result := &Rows{}
     for len := 0; rows.Next(); len++ {
         err = rows.Scan(scanArgs...)
         if err != nil {
             return nil, err
         }
-        record := make(Value)
+        record := &Row{}
         for i, col := range values {
             if col != nil {
-                record[columns[i]] = string(col)
+                (*record)[columns[i]] = string(col)
             }
         }
-        result = append(result, record)
+        *result = append(*result, record)
     }
     return result, nil
 }
