@@ -73,3 +73,32 @@ for _, v := range r.ResultValue() {
 fmt.Println("执行的sql", m.LastSql)
 ```
 
+### OR查询,连表查询与分页查询
+```go
+// OR查询条件设置
+conditon1 := m.NewCondition()
+conditon2 := m.NewCondition()
+condition := m.NewCondition()
+conditon1.SetFilter("id", 1)
+conditon2.SetFilter("id", 2)
+condition.SetFilterOr(conditon1, conditon2)
+// sql: where id = 1 or id = 2
+m.SetCondition(condition)
+
+// 关联查询
+m.LeftJoin("user2", "user2.user_id = user.user_id")
+
+// 分页
+pager := m.NewPager()
+// 设置每页条数
+pager.Limit = 20
+// 如果打开将使用子查询查询出总数
+pager.IsSubqueries = false
+// 设置偏移量
+pager.Offset = 5
+// 实现分页查询
+values, err := m.PagerFindAll(pager)
+fmt.Println("错误", err)
+fmt.Println("总条数与分页情况", pager)
+fmt.Println("当前页数的数据", values)
+```
