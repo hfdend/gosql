@@ -28,35 +28,42 @@
 <a id="列子" class="anchor" href="#%E5%88%97%E5%AD%90" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>列子</h3>
 
 <h3>
-<a id="创建连接连接池配置与设置表名称" class="anchor" href="#%E5%88%9B%E5%BB%BA%E8%BF%9E%E6%8E%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E9%85%8D%E7%BD%AE%E4%B8%8E%E8%AE%BE%E7%BD%AE%E8%A1%A8%E5%90%8D%E7%A7%B0" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>创建连接,连接池配置与设置表名称</h3>
+<a id="创建连接连接池配置设置表名称和数据写入" class="anchor" href="#%E5%88%9B%E5%BB%BA%E8%BF%9E%E6%8E%A5%E8%BF%9E%E6%8E%A5%E6%B1%A0%E9%85%8D%E7%BD%AE%E8%AE%BE%E7%BD%AE%E8%A1%A8%E5%90%8D%E7%A7%B0%E5%92%8C%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>创建连接,连接池配置,设置表名称和数据写入</h3>
 
-<div class="highlight highlight-source-go"><pre><span class="pl-c">// 建立连接</span>
-<span class="pl-smi">m</span> <span class="pl-k">:=</span> <span class="pl-c1">NewDbMysql</span>(<span class="pl-s"><span class="pl-pds">"</span>127.0.0.1<span class="pl-pds">"</span></span>, <span class="pl-c1">3306</span>, <span class="pl-s"><span class="pl-pds">"</span>root<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>test<span class="pl-pds">"</span></span>)
-<span class="pl-c">// 设置最大连接数</span>
-m.<span class="pl-c1">SetMaxOpenConns</span>(<span class="pl-c1">30</span>)
-<span class="pl-c">// SetMaxIdleConns sets the maximum number of connections in the idle</span>
-m.<span class="pl-c1">SetMaxIdleConns</span>(<span class="pl-c1">10</span>)
-<span class="pl-c">// 设置连接自动关闭时间,如果一个连接在100秒内没有任何操作将会被自动关闭掉; 注意:如果一个SQL在100秒内没有执行完毕也会被关闭掉</span>
-m.<span class="pl-c1">SetAutoCloseTime</span>(<span class="pl-c1">100</span>)
-<span class="pl-c">// 设置表面</span>
-m.<span class="pl-c1">SetTableName</span>(<span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>)</pre></div>
+<div class="highlight highlight-source-go"><pre><span class="pl-k">package</span> main
+
+<span class="pl-k">import</span> (
+    <span class="pl-s"><span class="pl-pds">"</span>github.com/hfdend/gosql<span class="pl-pds">"</span></span>
+    <span class="pl-s"><span class="pl-pds">"</span>fmt<span class="pl-pds">"</span></span>
+)
+
+<span class="pl-k">func</span> <span class="pl-en">main</span>() {
+    <span class="pl-c">// 建立连接</span>
+    <span class="pl-smi">m</span> <span class="pl-k">:=</span> gosql.<span class="pl-c1">NewDbMysql</span>(<span class="pl-s"><span class="pl-pds">"</span>127.0.0.1<span class="pl-pds">"</span></span>, <span class="pl-c1">3306</span>, <span class="pl-s"><span class="pl-pds">"</span>root<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span><span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>test<span class="pl-pds">"</span></span>)
+    <span class="pl-c">// 设置最大连接数</span>
+    m.<span class="pl-c1">SetMaxOpenConns</span>(<span class="pl-c1">30</span>)
+    <span class="pl-c">// SetMaxIdleConns sets the maximum number of connections in the idle</span>
+    m.<span class="pl-c1">SetMaxIdleConns</span>(<span class="pl-c1">10</span>)
+    <span class="pl-c">// 设置空闲连接池的生存时间</span>
+    m.<span class="pl-c1">SetAutoCloseTime</span>(<span class="pl-c1">100</span>)
+    <span class="pl-c">// 设置表名</span>
+    m.<span class="pl-c1">SetTableName</span>(<span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>)
+
+    <span class="pl-c">// 数据插入</span>
+    <span class="pl-smi">data</span> <span class="pl-k">:=</span> <span class="pl-k">map</span>[<span class="pl-k">string</span>]<span class="pl-k">interface</span>{} {
+        <span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>张三<span class="pl-pds">"</span></span>,
+        <span class="pl-s"><span class="pl-pds">"</span>sex<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>1<span class="pl-pds">"</span></span>,
+        <span class="pl-s"><span class="pl-pds">"</span>age<span class="pl-pds">"</span></span>: <span class="pl-c1">56</span>,
+        <span class="pl-s"><span class="pl-pds">"</span>hobbies<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>乒乓球<span class="pl-pds">"</span></span>,
+    }
+    <span class="pl-smi">id</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">Insert</span>(data);
+    fmt.<span class="pl-c1">Println</span>(e)
+    fmt.<span class="pl-c1">Println</span>(id)
+    fmt.<span class="pl-c1">Println</span>(m.<span class="pl-smi">LastSql</span>)
+}</pre></div>
 
 <h3>
-<a id="数据插入" class="anchor" href="#%E6%95%B0%E6%8D%AE%E6%8F%92%E5%85%A5" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>数据插入</h3>
-
-<div class="highlight highlight-source-go"><pre><span class="pl-c">// 数据插入</span>
-<span class="pl-smi">data</span> <span class="pl-k">:=</span> <span class="pl-k">map</span>[<span class="pl-k">string</span>]<span class="pl-k">interface</span>{} {
-    <span class="pl-s"><span class="pl-pds">"</span>user<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>张三<span class="pl-pds">"</span></span>,
-    <span class="pl-s"><span class="pl-pds">"</span>sex<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>1<span class="pl-pds">"</span></span>,
-    <span class="pl-s"><span class="pl-pds">"</span>age<span class="pl-pds">"</span></span>: <span class="pl-c1">56</span>,
-    <span class="pl-s"><span class="pl-pds">"</span>hobbies<span class="pl-pds">"</span></span>: <span class="pl-s"><span class="pl-pds">"</span>乒乓球<span class="pl-pds">"</span></span>,
-}
-<span class="pl-smi">id</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">Insert</span>(data);
-log.<span class="pl-c1">Println</span>(e)
-fmt.<span class="pl-c1">Println</span>(id)</pre></div>
-
-<h3>
-<a id="查询-and" class="anchor" href="#%E6%9F%A5%E8%AF%A2-and" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>查询 AND</h3>
+<a id="简单查询操作与查询结果数据转换" class="anchor" href="#%E7%AE%80%E5%8D%95%E6%9F%A5%E8%AF%A2%E6%93%8D%E4%BD%9C%E4%B8%8E%E6%9F%A5%E8%AF%A2%E7%BB%93%E6%9E%9C%E6%95%B0%E6%8D%AE%E8%BD%AC%E6%8D%A2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>简单查询操作与查询结果数据转换</h3>
 
 <div class="highlight highlight-source-go"><pre><span class="pl-smi">condition</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
 condition.<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>Id<span class="pl-pds">"</span></span>, <span class="pl-c1">3</span>)
@@ -66,24 +73,61 @@ condition.<span class="pl-c1">SetFilterEx</span>(<span class="pl-s"><span class=
 <span class="pl-c">// sql: select * from `user` where `Id` = 3 and `sex` = 1 and `age` &gt; 20</span>
 <span class="pl-smi">r</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">SetCondition</span>(condition).<span class="pl-c1">FindAll</span>()
 
-fmt.<span class="pl-c1">Println</span>(e)
-fmt.<span class="pl-c1">Println</span>(r)
-fmt.<span class="pl-c1">Println</span>(m.<span class="pl-smi">LastSql</span>)</pre></div>
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>错误<span class="pl-pds">"</span></span>, e)
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>查询结果<span class="pl-pds">"</span></span>, r)
+<span class="pl-c">// 将数据转换成map</span>
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>数据转换成map<span class="pl-pds">"</span></span>, r.<span class="pl-c1">Result</span>())
+<span class="pl-c">// 将数据Scan到结构体</span>
+<span class="pl-k">type</span> <span class="pl-v">User</span> <span class="pl-k">struct</span> {
+    <span class="pl-v">User</span>        <span class="pl-k">string</span>  <span class="pl-s"><span class="pl-pds">`</span>field:"user"<span class="pl-pds">`</span></span>
+    <span class="pl-v">Sex</span>         <span class="pl-k">string</span>   <span class="pl-s"><span class="pl-pds">`</span>field:"sex"<span class="pl-pds">`</span></span>
+    <span class="pl-v">Age</span>         <span class="pl-k">string</span>  <span class="pl-s"><span class="pl-pds">`</span>field:"age"<span class="pl-pds">`</span></span>
+    <span class="pl-v">Hobbies</span>     <span class="pl-k">string</span>  <span class="pl-s"><span class="pl-pds">`</span>field:"Hobbies"<span class="pl-pds">`</span></span>
+}
+<span class="pl-k">var</span> <span class="pl-smi">userAry</span> []<span class="pl-v">User</span>
+<span class="pl-k">var</span> <span class="pl-smi">userAryPtr</span> []*User
+r.<span class="pl-c1">Scan</span>(&amp;userAry)
+r.<span class="pl-c1">Scan</span>(&amp;userAryPtr)
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>数据转换成结构体<span class="pl-pds">"</span></span>, userAry, userAryPtr)
+<span class="pl-c">// 转换单个数据到结构体</span>
+<span class="pl-k">for</span> <span class="pl-smi">_</span>, <span class="pl-smi">v</span> <span class="pl-k">:=</span> <span class="pl-k">range</span> r.<span class="pl-c1">ResultValue</span>() {
+    <span class="pl-k">var</span> <span class="pl-smi">user</span> <span class="pl-v">User</span>
+    v.<span class="pl-c1">Scan</span>(&amp;user)
+    fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>单个结构体转换<span class="pl-pds">"</span></span>, user)
+}
+
+
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>执行的sql<span class="pl-pds">"</span></span>, m.<span class="pl-smi">LastSql</span>)</pre></div>
 
 <h3>
-<a id="查询or" class="anchor" href="#%E6%9F%A5%E8%AF%A2or" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>查询OR</h3>
+<a id="or查询连表查询与分页查询" class="anchor" href="#or%E6%9F%A5%E8%AF%A2%E8%BF%9E%E8%A1%A8%E6%9F%A5%E8%AF%A2%E4%B8%8E%E5%88%86%E9%A1%B5%E6%9F%A5%E8%AF%A2" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>OR查询,连表查询与分页查询</h3>
 
-<div class="highlight highlight-source-go"><pre><span class="pl-smi">condition</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
-<span class="pl-smi">c1</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>().<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>Id<span class="pl-pds">"</span></span>, <span class="pl-c1">3</span>)
-<span class="pl-smi">c2</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>().<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>Id<span class="pl-pds">"</span></span>, <span class="pl-c1">4</span>)
-c2.<span class="pl-c1">SetFilterEx</span>(<span class="pl-s"><span class="pl-pds">"</span>Age<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>&gt;<span class="pl-pds">"</span></span>, <span class="pl-c1">20</span>)
+<div class="highlight highlight-source-go"><pre><span class="pl-c">// OR查询条件设置</span>
+<span class="pl-smi">conditon1</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
+<span class="pl-smi">conditon2</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
+<span class="pl-smi">condition</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewCondition</span>()
+conditon1.<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span>, <span class="pl-c1">1</span>)
+conditon2.<span class="pl-c1">SetFilter</span>(<span class="pl-s"><span class="pl-pds">"</span>id<span class="pl-pds">"</span></span>, <span class="pl-c1">2</span>)
+condition.<span class="pl-c1">SetFilterOr</span>(conditon1, conditon2)
+<span class="pl-c">// sql: where id = 1 or id = 2</span>
+m.<span class="pl-c1">SetCondition</span>(condition)
 
-condition.<span class="pl-c1">SetFilterOr</span>(c1, c2)
-<span class="pl-c">// sql: select * from `user` where (`Id` = 3) or (`Id` = 4 and `Age` &gt; 20)</span>
-<span class="pl-smi">r</span>, <span class="pl-smi">e</span> <span class="pl-k">:=</span> m.<span class="pl-c1">SetCondition</span>(condition).<span class="pl-c1">FindAll</span>()
-fmt.<span class="pl-c1">Println</span>(e)
-fmt.<span class="pl-c1">Println</span>(r)
-fmt.<span class="pl-c1">Println</span>(m.<span class="pl-smi">LastSql</span>)</pre></div>
+<span class="pl-c">// 关联查询</span>
+m.<span class="pl-c1">LeftJoin</span>(<span class="pl-s"><span class="pl-pds">"</span>user2<span class="pl-pds">"</span></span>, <span class="pl-s"><span class="pl-pds">"</span>user2.user_id = user.user_id<span class="pl-pds">"</span></span>)
+
+<span class="pl-c">// 分页</span>
+<span class="pl-smi">pager</span> <span class="pl-k">:=</span> m.<span class="pl-c1">NewPager</span>()
+<span class="pl-c">// 设置每页条数</span>
+pager.<span class="pl-smi">Limit</span> = <span class="pl-c1">20</span>
+<span class="pl-c">// 如果打开将使用子查询查询出总数</span>
+pager.<span class="pl-smi">IsSubqueries</span> = <span class="pl-c1">false</span>
+<span class="pl-c">// 设置偏移量</span>
+pager.<span class="pl-smi">Offset</span> = <span class="pl-c1">5</span>
+<span class="pl-c">// 实现分页查询</span>
+<span class="pl-smi">values</span>, <span class="pl-smi">err</span> <span class="pl-k">:=</span> m.<span class="pl-c1">PagerFindAll</span>(pager)
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>错误<span class="pl-pds">"</span></span>, err)
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>总条数与分页情况<span class="pl-pds">"</span></span>, pager)
+fmt.<span class="pl-c1">Println</span>(<span class="pl-s"><span class="pl-pds">"</span>当前页数的数据<span class="pl-pds">"</span></span>, values)</pre></div>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/hfdend/gosql">Gosql</a> is maintained by <a href="https://github.com/hfdend">hfdend</a>.</span>
