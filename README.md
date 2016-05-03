@@ -81,6 +81,7 @@ for _, v := range *handlerUserAry {
 fmt.Println("自定义转换结果 end")
 fmt.Println("执行的sql", m.LastSql)
 ```
+输出
 ```Shell
 错误 <nil>
 查询结果 &[0xc82002c038]
