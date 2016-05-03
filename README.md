@@ -81,6 +81,17 @@ for _, v := range *handlerUserAry {
 fmt.Println("自定义转换结果 end")
 fmt.Println("执行的sql", m.LastSql)
 ```
+```Shell
+错误 <nil>
+查询结果 &[0xc82002c038]
+数据转换成map [map[Id:3 user:张三 sex:1 age:28 hobbies:乒乓球]]
+数据转换成结构体 [{张三 1 28 }] [0xc820010480]
+单个结构体转换 {张三 1 28 }
+自定义转换结果 start
+&{张三 1 1010 }
+自定义转换结果 end
+执行的sql &{select * from `user` where `Id` = ? and `sex` = ? and `age` > ? [3 1 20]}
+```
 
 ### OR查询,连表查询与分页查询
 ```go
