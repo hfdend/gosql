@@ -6,21 +6,23 @@ import (
 )
 
 type Values interface {
-    Scan(interface{})
+    Scan(interface{}, ...func(interface{}, Value))
     Result()        []map[string]string
     ResultValue()   []Value
 }
 
 type Value interface {
-    Scan(interface{})
+    Scan(interface{}, ...func(interface{}, Value))
     Result()    map[string]string
+    Val(string) (string, bool)
+    MustVal(string) (string)
 }
 
 type Row map[string]string
 
 type Rows []*Row
 
-func (this *Rows) Scan(v interface{})  {
+func (this *Rows) Scan(v interface{}, funcs ...func(interface{}, Value))  {
     rvs := reflect.ValueOf(v)
     if rvs.Kind() != reflect.Ptr || !rvs.IsValid() {
         return
@@ -34,6 +36,9 @@ func (this *Rows) Scan(v interface{})  {
             rv.Set(s)
         } else {
             value.setValueOf(rv)
+        }
+        for _, f := range funcs {
+            f(rv.Interface(), value)
         }
     }
     rvs.Elem().Set(slice)
@@ -55,17 +60,30 @@ func (this *Rows) ResultValue() []Value {
     return valueAry
 }
 
-func (this *Row) Scan(v interface{})  {
+func (this *Row) Scan(v interface{}, funcs ...func(interface{}, Value))  {
     rvs := reflect.ValueOf(v)
     rts := rvs.Type()
     if rts.Kind() != reflect.Ptr || rvs.IsNil() {
         return
     }
     this.setValueOf(rvs)
+    for _, f := range funcs {
+        f(v, this)
+    }
 }
 
 func (this *Row) Result() map[string]string {
     return map[string]string(*this)
+}
+
+func (this *Row) Val(key string) (string, bool) {
+    val, ok := (*this)[key]
+    return val, ok
+}
+
+func (this *Row) MustVal(key string) string {
+    val, _ := (*this)[key]
+    return val
 }
 
 func (this *Row) setValueOf(rvs reflect.Value) {

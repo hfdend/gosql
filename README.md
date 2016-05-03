@@ -68,8 +68,17 @@ for _, v := range r.ResultValue() {
     v.Scan(&user)
     fmt.Println("单个结构体转换", user)
 }
-
-
+// 自定义结构转换
+handlerUserAry := &[]*User{}
+r.Scan(handlerUserAry, func(v interface{}, row gosql.Value) {
+    u := v.(*User)
+    u.Age = "1010"
+})
+fmt.Println("自定义转换结果 start")
+for _, v := range *handlerUserAry {
+    fmt.Println(v)
+}
+fmt.Println("自定义转换结果 end")
 fmt.Println("执行的sql", m.LastSql)
 ```
 

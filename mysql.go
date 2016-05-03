@@ -30,7 +30,7 @@ type Pager struct {
 }
 
 // 最后一次执行的SQL
-type LastSql struct {
+type ExecSql struct {
     SQL		string
     Args	interface{}
 }
@@ -40,7 +40,7 @@ type LastSql struct {
  */
 type DbMysql struct {
     DB				*homeDB
-    LastSql			*LastSql
+    LastSql			*ExecSql
     Info			map[int]interface{}
     tableName		string
     wTableName		string
@@ -369,7 +369,9 @@ func (this *DbMysql) Query(sql string, args ...interface{}) (Values, error) {
         return nil, err
     }
     this.DB.FreshLastUseTime()
-    this.setLastSql(sql, args)
+    lastSql := &ExecSql{sql, args}
+    logWrite(*lastSql)
+    this.setLastSql(lastSql)
     rows, err := this.DB.Query(sql, args...)
     defer func() {
         if rows != nil {
@@ -389,7 +391,9 @@ func (this *DbMysql) Exec(sql string, args ...interface{}) (int, error) {
         return 0, err
     }
     this.DB.FreshLastUseTime()
-    this.setLastSql(sql, args)
+    lastSql := &ExecSql{sql, args}
+    logWrite(*lastSql)
+    this.setLastSql(lastSql)
     res, err := this.DB.Exec(sql, args...)
     if err != nil {
         return 0, err
@@ -481,10 +485,10 @@ func (this *DbMysql) getSelectSql(isCount bool) (string, []interface{}) {
     if havingWhereSql != "" {
         sql += " having " + havingWhereSql
     }
-    if this.order != "" {
+    if !isCount && this.order != "" {
         sql += " order by " + this.order
     }
-    if this.limit != "" {
+    if !isCount && this.limit != "" {
         sql += " limit " + this.limit
     }
     return sql, append(exeArgs, havingExeArgs...)
@@ -563,8 +567,7 @@ func (this *DbMysql) rowsToAry(rows *sql.Rows) (Values, error) {
     return result, nil
 }
 
-func (this *DbMysql) setLastSql(sql string, args interface{}) {
-    lastSql := &LastSql{sql, args}
+func (this *DbMysql) setLastSql(lastSql *ExecSql) {
     this.LastSql = lastSql
 }
 
@@ -613,12 +616,12 @@ func (this *Condition) SetFilterEx(key string, ex string, val interface{}) error
     }
     args := []interface{}{}
     switch val.(type) {
-    case int, string:
+    default:
         sql += " " + ex + " ?"
         args = append(args, val)
-    case []string:
+    case []interface{}:
         sql += " in ("
-        strAry := val.([]string)
+        strAry := val.([]interface{})
         for i, v := range strAry {
             if i == 0 {
                 sql += "?"
@@ -628,21 +631,6 @@ func (this *Condition) SetFilterEx(key string, ex string, val interface{}) error
             args = append(args, v)
         }
         sql += ")"
-    case []int:
-        sql += " in ("
-        intAry := val.([]int)
-        for i, v := range intAry {
-            if i == 0 {
-                sql += "?"
-            } else {
-                sql += ",?"
-            }
-            args = append(args, v)
-        }
-        sql += ")"
-    default:
-        err := errors.New("SetFilter 第二个参数错误,只能是int, string, []int, []string 四种类型")
-        return err
     }
     if len(this.whereSql) == 0 {
         this.whereSql = sql
