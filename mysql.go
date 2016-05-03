@@ -45,10 +45,10 @@ type DbMysql struct {
     tableName		string
     wTableName		string
     selectFields	string
-    where 			map[string]string
+    where 			map[string]interface{}
     condition		*Condition
     group			string
-    having			map[string]string
+    having			map[string]interface{}
     order			string
     limit			string
     join			string
@@ -193,7 +193,7 @@ func (this *DbMysql) LeftJoin(tableName, on string) *DbMysql {
     return this
 }
 
-func (this *DbMysql) Where(condition map[string] string) *DbMysql {
+func (this *DbMysql) Where(condition map[string]interface{}) *DbMysql {
     this.where = condition
     return this
 }
@@ -230,7 +230,7 @@ func (this *DbMysql) Group(field string) *DbMysql {
     return this
 }
 
-func (this *DbMysql) Having(condition map[string]string) *DbMysql {
+func (this *DbMysql) Having(condition map[string]interface{}) *DbMysql {
     this.having = condition
     return this
 }
@@ -494,7 +494,7 @@ func (this *DbMysql) getSelectSql(isCount bool) (string, []interface{}) {
     return sql, append(exeArgs, havingExeArgs...)
 }
 
-func (this *DbMysql) getWhereSql(condition map[string]string) (string, []interface{}) {
+func (this *DbMysql) getWhereSql(condition map[string]interface{}) (string, []interface{}) {
     whereSql, args := this.parseSql(condition)
     if this.condition != nil {
         if where, ary := this.condition.GetSql(); where != "" {
@@ -509,17 +509,17 @@ func (this *DbMysql) getWhereSql(condition map[string]string) (string, []interfa
     return whereSql, args
 }
 
-func (this *DbMysql) getHavingSql(condition map[string]string) (string, []interface{}) {
+func (this *DbMysql) getHavingSql(condition map[string]interface{}) (string, []interface{}) {
     whereSql, args := this.parseSql(condition)
     return whereSql, args
 }
 
 
-func (this *DbMysql) parseSql(condition map[string]string) (string, []interface{}) {
+func (this *DbMysql) parseSql(condition map[string]interface{}) (string, []interface{}) {
     args := []interface{}{}
     whereAry := []string{}
     var tmpAryKey []string
-    for k, v := range(condition) {
+    for k, v := range condition {
         k = strings.Trim(k, " ")
         tmpAryKey = []string{}
         for _, vv := range(strings.Split(k, " ")) {
@@ -585,9 +585,9 @@ func (this *DbMysql) clear() {
     }
     this.wTableName = this.tableName
     this.selectFields = ""
-    this.where = map[string]string{}
+    this.where = map[string]interface{}{}
     this.group = ""
-    this.having = map[string]string{}
+    this.having = map[string]interface{}{}
     this.join = ""
     this.order = ""
     this.limit = ""
