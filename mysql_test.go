@@ -68,7 +68,20 @@ func Test_Find(t *testing.T) {
 
         time.Sleep(10 * time.Second)
     }
-
-
 }
 
+func Test_Tostring(t *testing.T) {
+    type d struct {
+        haha int
+    }
+    type M struct {
+        D   *d
+        Id      int8         `field:"id"`
+        Name    string      `field:"name"`
+        Name2    float64      `field:"name2"`
+    }
+
+    m := &M{D:&d{12}, Id:13, Name:"哈哈", Name2: 123.433}
+    s := toString(m)
+    fmt.Println(s)
+}

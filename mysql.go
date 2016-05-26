@@ -7,9 +7,9 @@ import (
     "log"
     "strings"
     "strconv"
-    "errors"
     "time"
     "sync"
+    "reflect"
 )
 
 var MysqlDbMap map[string]*homeDB
@@ -45,6 +45,8 @@ type DbMysql struct {
     tableName		string
     wTableName		string
     selectFields	string
+    useFieldMap  map[string]bool
+    notUseFieldMap  map[string]bool
     where 			map[string]interface{}
     condition		*Condition
     group			string
@@ -325,18 +327,50 @@ func (this *DbMysql) QueryOne(sql string, args ...interface{}) (Value, error) {
     }
 }
 
-func (this *DbMysql) Update(data map[string]interface{}) (int, error) {
-    sql, exeArgs := this.getUpdateSql(toString(data))
+// 设置更新(插入)的字段 逗号隔开
+func (this *DbMysql) SetUseField(s string) *DbMysql {
+    if this.useFieldMap == nil {
+        this.useFieldMap = map[string]bool{}
+    }
+    for _, v := range strings.Split(s, ",") {
+        if v = strings.TrimSpace(v); v != "" {
+            this.useFieldMap[v] = true
+        }
+    }
+    return this
+}
+
+// 设置不更新(插入)的字段 逗号隔开
+func (this *DbMysql) SetNotUseField(s string) *DbMysql {
+    if this.useFieldMap == nil {
+        this.notUseFieldMap = map[string]bool{}
+    }
+    for _, v := range strings.Split(s, ",") {
+        if v = strings.TrimSpace(v); v != "" {
+            this.notUseFieldMap[v] = true
+        }
+    }
+    return this
+}
+
+// data 可以是map[string]string   也可以是一个struct 必须指明tag field 才会更新
+// struct {
+//     Id      int8         `field:"id"`
+//     Name    string       `field:"name"`
+//     Name2   float64      `field:"name2"`
+// }
+func (this *DbMysql) Update(data interface{}) (int, error) {
+    sql, exeArgs := this.getUpdateSql(this.GetUseMap(data))
     return this.Exec(sql, exeArgs...)
 }
 
-func (this *DbMysql) Insert(data map[string]interface{}) (int, error) {
-    sql, exeArgs := this.getInsertSql(toString(data))
+func (this *DbMysql) Insert(data interface{}) (int, error) {
+    sql, exeArgs := this.getInsertSql(this.GetUseMap(data))
     return this.Exec(sql, exeArgs...)
 }
 
-func (this *DbMysql) InsertIgnore(data map[string]interface{}) (int, error) {
-    sql, exeArgs := this.getInsertSql(toString(data))
+func (this *DbMysql) InsertIgnore(data interface{}) (int, error) {
+    sql, exeArgs := this.getInsertSql(this.GetUseMap(data))
     sql = strings.Replace(sql, "insert into", "insert ignore into", -1)
     return this.Exec(sql, exeArgs...)
 }
@@ -424,6 +458,25 @@ func (this *DbMysql) getUpdateSql(data map[string]string) (string, []interface{}
     }
     exeArgs = append(exeArgs, whereExeArgs...)
     return sql, exeArgs
+}
+
+func (this *DbMysql) GetUseMap(data interface{}) map[string]string {
+    dataMap := toString(data)
+    for k, _ := range dataMap {
+        if this.useFieldMap != nil {
+            // 如果不在需要更新的字段中则剔除
+            if _, ok := this.useFieldMap[k]; !ok {
+                delete(dataMap, k)
+            }
+        }
+        if this.notUseFieldMap != nil {
+            // 如果在不需要更新的字段中则剔除
+            if _, ok := this.notUseFieldMap[k]; ok {
+                delete(dataMap, k)
+            }
+        }
+    }
+    return dataMap
 }
 
 func (this *DbMysql) getInsertSql(data map[string]string) (string, []interface{}) {
@@ -592,6 +645,8 @@ func (this *DbMysql) clear() {
     this.order = ""
     this.limit = ""
     this.condition = nil
+    this.useFieldMap = nil
+    this.notUseFieldMap = nil
 }
 
 type Condition struct {
@@ -604,10 +659,6 @@ type Condition struct {
 // ex  判断表达式 可以是 = , >, >=, <, <=, !=
 // val 值, 如果是int或者string则表示等于; 如果是[]int 或者 []string 则表示in查询 其他类型不支持(如果ex不等于"=" 那么仅仅支持int 和 string)
 func (this *Condition) SetFilterEx(key string, ex string, val interface{}) error {
-    if no := ex == "=" || ex == ">" || ex == ">=" || ex == "<" || ex == "<=" || ex == "!=" || ex == "like"; !no  {
-        err := errors.New("ex 参数错误只能是 = | > | >= | < | <= | in | like")
-        return err
-    }
     sql := ""
     if strings.Index(key, "`") != -1 || strings.Index(key, ".") != -1 {
         sql += key
@@ -622,6 +673,54 @@ func (this *Condition) SetFilterEx(key string, ex string, val interface{}) error
     case []interface{}:
         sql += " in ("
         strAry := val.([]interface{})
+        for i, v := range strAry {
+            if i == 0 {
+                sql += "?"
+            } else {
+                sql += ",?"
+            }
+            args = append(args, v)
+        }
+        sql += ")"
+    case []string:
+        sql += " in ("
+        strAry := val.([]string)
+        for i, v := range strAry {
+            if i == 0 {
+                sql += "?"
+            } else {
+                sql += ",?"
+            }
+            args = append(args, v)
+        }
+        sql += ")"
+    case []int:
+        sql += " in ("
+        strAry := val.([]int)
+        for i, v := range strAry {
+            if i == 0 {
+                sql += "?"
+            } else {
+                sql += ",?"
+            }
+            args = append(args, v)
+        }
+        sql += ")"
+    case []int64:
+        sql += " in ("
+        strAry := val.([]int64)
+        for i, v := range strAry {
+            if i == 0 {
+                sql += "?"
+            } else {
+                sql += ",?"
+            }
+            args = append(args, v)
+        }
+        sql += ")"
+    case []float64:
+        sql += " in ("
+        strAry := val.([]float64)
         for i, v := range strAry {
             if i == 0 {
                 sql += "?"
@@ -677,7 +776,7 @@ func NewPager() *Pager {
     return p
 }
 
-func toString(data map[string]interface{}) map[string]string {
+func toString(data interface{}) map[string]string {
     val := map[string]string{}
     var f = func(v interface{}) string {
         s := ""
@@ -697,8 +796,48 @@ func toString(data map[string]interface{}) map[string]string {
         }
         return s
     }
-    for k, v := range data {
-        val[k] = f(v)
+    if tmp, ok := data.(map[string]string); ok {
+        return tmp
+    } else if tmp, ok := data.(map[string]interface{}); ok {
+        for k, v := range tmp {
+            val[k] = f(v)
+        }
+    } else {
+        v := reflect.ValueOf(data)
+        if !v.IsValid() {
+            return val
+        }
+        if v.Kind() == reflect.Ptr {
+            v = v.Elem()
+        }
+        if !v.IsValid() {
+            return val
+        }
+        t := v.Type()
+        for i := 0; i < v.NumField(); i++ {
+            fv := v.Field(i)
+            ft := t.Field(i)
+            field := ft.Tag.Get("field")
+            if field != "" && field != "-"{
+                switch ft.Type.Kind() {
+                case reflect.Int, reflect.Int64, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+                    v := fv.Int()
+                    val[field] = strconv.FormatInt(v, 10)
+                case reflect.Float64, reflect.Float32:
+                    v := fv.Float()
+                    val[field] = strconv.FormatFloat(v, 'f', -1, 64)
+                case reflect.String:
+                    val[field] = fv.String()
+                case reflect.Bool:
+                    if fv.Bool() {
+                        val[field] = "1"
+                    } else {
+                        val[field] = "0"
+                    }
+                }
+            }
+        }
+
     }
     return val
 }
