@@ -12,6 +12,8 @@ import (
     "reflect"
 )
 
+const AutoCloseTimeSecond = 100
+
 var MysqlDbMap map[string]*homeDB
 var connectLock sync.Mutex
 
@@ -41,7 +43,8 @@ type ExecSql struct {
 type DbMysql struct {
     DB				*homeDB
     LastSql			*ExecSql
-    Info			map[int]interface{}
+    Master          *ConfigModel
+    Slave           *ConfigModel
     tableName		string
     wTableName		string
     selectFields	string
@@ -54,6 +57,7 @@ type DbMysql struct {
     order			string
     limit			string
     join			string
+    useModel        *ConfigModel
     noClear			bool
 }
 
@@ -61,41 +65,47 @@ func (this *homeDB) FreshLastUseTime() {
     this.LastUseTime = time.Now()
 }
 
-const (
-    G_Host = iota
-    G_User
-    G_Password
-    G_Port
-    G_DbName
-    G_AutoCloseTime
-    G_MaxOpenConns
-    G_MaxIdleConns
-)
-
-func NewDbMysql(host string, port int, user string, password string, dbname string) *DbMysql {
+func NewDbMysql(host string, port int, user string, password string, dbName string) *DbMysql {
     this := new(DbMysql)
-    this.Info = make(map[int]interface{})
-    this.Info[G_Host] = host
-    this.Info[G_User] = user
-    this.Info[G_Password] = password
-    this.Info[G_Port] = port
-    this.Info[G_DbName] = dbname
-    this.Info[G_AutoCloseTime] = 100
-    this.Info[G_MaxOpenConns] = 0
-    this.Info[G_MaxIdleConns] = 0
+    configModel := &ConfigModel{host, port, user, password, dbName, AutoCloseTimeSecond, 0, 0}
+    this.Master = configModel
+    this.Slave = configModel
+    return this
+}
+
+func (this *DbMysql) UseMaster() *DbMysql {
+    this.useModel = this.Master
+    return this
+}
+
+func (this *DbMysql) useMaster() *DbMysql {
+    if this.useModel == nil {
+        this.useModel = this.Master
+    }
+    return this
+}
+
+func (this *DbMysql) UseSlave() *DbMysql {
+    this.useModel = this.Slave
+    return this
+}
+
+func (this *DbMysql) useSlave() *DbMysql {
+    if this.useModel == nil {
+        this.useModel = this.Slave
+    }
     return this
 }
 
 // 数据库连接
 func (this *DbMysql) Connect() error {
+    if this.useModel == nil {
+        this.useModel = this.Master
+    }
     if MysqlDbMap == nil {
         MysqlDbMap = make(map[string]*homeDB)
     }
-    if this.DB != nil && !this.DB.IsClose {
-        return nil
-    }
-    dataSourceName := fmt.Sprintf("%s:%s@(%s:%d)/%s", this.Info[G_User], this.Info[G_Password], this.Info[G_Host], this.Info[G_Port], this.Info[G_DbName])
-
+    dataSourceName := fmt.Sprintf("%s:%s@(%s:%d)/%s", this.useModel.User, this.useModel.Password, this.useModel.Host, this.useModel.Port, this.useModel.DBName)
     if this.connectOnly(dataSourceName) {
         // 用现有资源建立连接成功
         return nil
@@ -115,14 +125,12 @@ func (this *DbMysql) Connect() error {
         return err
     }
     homeDB := &homeDB{DB: db, LastUseTime: time.Now(), IsClose: false}
-    if conns, is := this.Info[G_MaxOpenConns].(int); is && conns > 0 {
-        homeDB.SetMaxOpenConns(conns)
-    }
-    if conns, is := this.Info[G_MaxIdleConns].(int); is && conns > 0 {
-        homeDB.SetMaxIdleConns(conns)
-    }
-    if t, is := this.Info[G_AutoCloseTime].(int); is {
-        homeDB.AutoCloseTime = t
+    homeDB.SetMaxOpenConns(this.useModel.MaxOpenConns)
+    homeDB.SetMaxIdleConns(this.useModel.MaxIdleConns)
+    if this.useModel.AutoCloseTime > 0 {
+        homeDB.AutoCloseTime = this.useModel.AutoCloseTime
+    } else {
+        homeDB.AutoCloseTime = AutoCloseTimeSecond
     }
     MysqlDbMap[dataSourceName] = homeDB
     this.DB = homeDB
@@ -141,28 +149,6 @@ func (this *DbMysql) connectOnly(dataSourceName string) bool {
 
 func (this *DbMysql) Ping() error {
     return this.DB.Ping()
-}
-
-// 设置连接自动关闭时间,如果一个连接在t秒内没有任何操作将会被自动关闭掉
-func (this *DbMysql) SetAutoCloseTime(t int) {
-    this.Info[G_AutoCloseTime] = t
-}
-
-func (this *DbMysql) SetMaxIdleConns(t int) {
-    this.Info[G_MaxIdleConns] = t
-}
-
-func (this *DbMysql) SetMaxOpenConns(t int) {
-    this.Info[G_MaxOpenConns] = t
-}
-
-func (this *DbMysql) Conf(host, port int, user, password string, dbname string) {
-    this.Info = make(map[int]interface{})
-    this.Info[G_Host] = host
-    this.Info[G_User] = user
-    this.Info[G_Password] = password
-    this.Info[G_Port] = port
-    this.Info[G_DbName] = dbname
 }
 
 /**
@@ -399,6 +385,7 @@ func (this *DbMysql) UnLockTable() error {
 }
 
 func (this *DbMysql) Query(sql string, args ...interface{}) (Values, error) {
+    this.useSlave()
     if err := this.Connect(); err != nil {
         return nil, err
     }
@@ -421,6 +408,7 @@ func (this *DbMysql) Query(sql string, args ...interface{}) (Values, error) {
 }
 
 func (this *DbMysql) Exec(sql string, args ...interface{}) (int, error) {
+    this.useMaster()
     if err := this.Connect(); err != nil {
         return 0, err
     }
@@ -647,6 +635,7 @@ func (this *DbMysql) clear() {
     this.condition = nil
     this.useFieldMap = nil
     this.notUseFieldMap = nil
+    this.useModel = nil
 }
 
 type Condition struct {

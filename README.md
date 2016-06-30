@@ -1,4 +1,4 @@
-# gosql 一个简单的MySql DML语句封装
+# gosql 一个简单的MySql DML语句封装, 包含(空闲连接自动断开, sql封装使用, 读写分离)
 ---
 ### 列子
 ### 创建连接,连接池配置,设置表名称和数据写入
@@ -106,6 +106,9 @@ condition.SetFilterOr(conditon1, conditon2)
 // sql: where id = 1 or id = 2
 m.SetCondition(condition)
 
+// in 查询
+conditon2.SetFilter("id", []int{1, 3, 4})
+
 // 关联查询
 m.LeftJoin("user2", "user2.user_id = user.user_id")
 
@@ -122,4 +125,21 @@ values, err := m.PagerFindAll(pager)
 fmt.Println("错误", err)
 fmt.Println("总条数与分页情况", pager)
 fmt.Println("当前页数的数据", values)
+```
+
+### 读写分离
+```go
+conf := &gosql.Config{
+    Master: &gosql.ConfigModel{"127.0.0.1", 3306, "root", "pwd", "test", 100, 0, 0},
+    Slave: []*gosql.ConfigModel{
+        &gosql.ConfigModel{"127.0.0.1", 3306, "root", "pwd", "test", 100, 0, 0},
+        &gosql.ConfigModel{"192.168.101.241", 3306, "root", "pwd", "test", 100, 0, 0},
+    },
+}
+m := conf.NewDbMysql() // 实例化的时候已经把写库的配置和随机一条读库的配置记录到DbMysql中
+m.SetTableName("demo").FindAll()        // 默认连接读库执行查询操作    
+m.SetTableName("demo").Insert(dbData)   // 默认连接写库执行写入操作  Update一样的逻辑
+// 手动指定读写库
+m.SetTableName("demo").UseMaster().FindAll() 
+m.SetTableName("demo").UseSlave().FindAll() 
 ```
