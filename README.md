@@ -142,4 +142,4 @@ m.SetTableName("demo").Insert(dbData)   // 默认连接写库执行写入操作 
 // 手动指定读写库
 m.SetTableName("demo").UseMaster().FindAll() 
 m.SetTableName("demo").UseSlave().FindAll() 
-```
+```just

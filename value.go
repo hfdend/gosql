@@ -7,28 +7,28 @@ import (
 
 type Values interface {
     Scan(interface{}, ...func(interface{}, Value))
-    Result()        []map[string]string
-    ResultValue()   []Value
+    Result() []map[string]string
+    ResultValue() []Value
 }
 
 type Value interface {
     Scan(interface{}, ...func(interface{}, Value))
-    Result()    map[string]string
+    Result() map[string]string
     Val(string) (string, bool)
-    MustVal(string) (string)
+    MustVal(string) string
 }
 
 type Row map[string]string
 
 type Rows []*Row
 
-func (this *Rows) Scan(v interface{}, funcs ...func(interface{}, Value))  {
+func (this *Rows) Scan(v interface{}, funcs ...func(interface{}, Value)) {
     rvs := reflect.ValueOf(v)
     if rvs.Kind() != reflect.Ptr || !rvs.IsValid() {
         return
     }
     slice := reflect.MakeSlice(rvs.Elem().Type(), len(*this), len(*this))
-    for i,  value := range *this {
+    for i, value := range *this {
         rv := slice.Index(i)
         if rv.Kind() == reflect.Ptr {
             s := reflect.New(rv.Type().Elem())
@@ -60,7 +60,7 @@ func (this *Rows) ResultValue() []Value {
     return valueAry
 }
 
-func (this *Row) Scan(v interface{}, funcs ...func(interface{}, Value))  {
+func (this *Row) Scan(v interface{}, funcs ...func(interface{}, Value)) {
     rvs := reflect.ValueOf(v)
     rts := rvs.Type()
     if rts.Kind() != reflect.Ptr || rvs.IsNil() {

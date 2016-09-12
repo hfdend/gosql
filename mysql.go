@@ -1,73 +1,63 @@
 package gosql
 
 import (
-    _ "github.com/go-sql-driver/mysql"
     "database/sql"
     "fmt"
+    _ "github.com/go-sql-driver/mysql"
     "log"
-    "strings"
-    "strconv"
-    "time"
-    "sync"
     "reflect"
+    "strconv"
+    "strings"
+    "sync"
+    "time"
 )
 
 const AutoCloseTimeSecond = 100
 
-var MysqlDbMap map[string]*homeDB
+var MysqlDbMap map[string]*sql.DB
+
 var connectLock sync.Mutex
 
-type homeDB struct {
-    *sql.DB
-    LastUseTime		time.Time
-    IsClose         bool
-    AutoCloseTime   int
-}
-
 type Pager struct {
-    Limit 			int // 每页条数
-    Count			int // 总条数
-    Offset			int // 偏移量
-    IsSubqueries	bool // 是否使用子查询查询总数
+    Limit        int  // 每页条数
+    Count        int  // 总条数
+    Offset       int  // 偏移量
+    IsSubqueries bool // 是否使用子查询查询总数
 }
 
 // 最后一次执行的SQL
 type ExecSql struct {
-    SQL		string
-    Args	interface{}
+    SQL  string
+    Args interface{}
 }
 
 /**
  * Mysql数据库操作.
  */
 type DbMysql struct {
-    DB				*homeDB
-    LastSql			*ExecSql
-    Master          *ConfigModel
-    Slave           *ConfigModel
-    tableName		string
-    wTableName		string
-    selectFields	string
-    useFieldMap  map[string]bool
-    notUseFieldMap  map[string]bool
-    where 			map[string]interface{}
-    condition		*Condition
-    group			string
-    having			map[string]interface{}
-    order			string
-    limit			string
-    join			string
-    useModel        *ConfigModel
-    noClear			bool
-}
-
-func (this *homeDB) FreshLastUseTime() {
-    this.LastUseTime = time.Now()
+    DB             *sql.DB
+    LastSql        *ExecSql
+    Master         *ConfigModel
+    Slave          *ConfigModel
+    tableName      string
+    wTableName     string
+    selectFields   string
+    useFieldMap    map[string]bool
+    notUseFieldMap map[string]bool
+    where          map[string]interface{}
+    condition      *Condition
+    group          string
+    having         map[string]interface{}
+    order          string
+    limit          string
+    join           string
+    useModel       *ConfigModel
+    noClear        bool
 }
 
 func NewDbMysql(host string, port int, user string, password string, dbName string) *DbMysql {
     this := new(DbMysql)
-    configModel := &ConfigModel{host, port, user, password, dbName, AutoCloseTimeSecond, 0, 0}
+    configModel := &ConfigModel{host, port, user, password, dbName, AutoCloseTimeSecond, 100, 10}
     this.Master = configModel
     this.Slave = configModel
     return this
@@ -103,7 +93,7 @@ func (this *DbMysql) Connect() error {
         this.useModel = this.Master
     }
     if MysqlDbMap == nil {
-        MysqlDbMap = make(map[string]*homeDB)
+        MysqlDbMap = make(map[string]*sql.DB)
     }
     dataSourceName := fmt.Sprintf("%s:%s@(%s:%d)/%s", this.useModel.User, this.useModel.Password, this.useModel.Host, this.useModel.Port, this.useModel.DBName)
     if this.connectOnly(dataSourceName) {
@@ -114,7 +104,7 @@ func (this *DbMysql) Connect() error {
     connectLock.Lock()
     defer connectLock.Unlock()
     if this.connectOnly(dataSourceName) {
-        // 如果同事还有其他携程创建连接成功了
+        // 如果同事还有其他协程创建连接成功了
         return nil
     }
     db, err := sql.Open("mysql", dataSourceName)
@@ -124,24 +114,24 @@ func (this *DbMysql) Connect() error {
     if err := db.Ping(); err != nil {
         return err
     }
-    homeDB := &homeDB{DB: db, LastUseTime: time.Now(), IsClose: false}
-    homeDB.SetMaxOpenConns(this.useModel.MaxOpenConns)
-    homeDB.SetMaxIdleConns(this.useModel.MaxIdleConns)
-    if this.useModel.AutoCloseTime > 0 {
-        homeDB.AutoCloseTime = this.useModel.AutoCloseTime
-    } else {
-        homeDB.AutoCloseTime = AutoCloseTimeSecond
+    if this.useModel.MaxIdleConns > 0 {
+        db.SetMaxIdleConns(this.useModel.MaxIdleConns)
     }
-    MysqlDbMap[dataSourceName] = homeDB
-    this.DB = homeDB
+    if this.useModel.MaxOpenConns > 0 {
+        db.SetMaxOpenConns(this.useModel.MaxOpenConns)
+    }
+    if this.useModel.AutoCloseTime > 0 {
+        db.SetConnMaxLifetime(time.Duration(this.useModel.AutoCloseTime) * time.Second)
+    }
+    MysqlDbMap[dataSourceName] = db
+    this.DB = db
     return nil
 }
 
 // 使用有已有的连接资源
 func (this *DbMysql) connectOnly(dataSourceName string) bool {
-    if homeDB, ok := MysqlDbMap[dataSourceName]; ok {
-        homeDB.FreshLastUseTime()
-        this.DB = homeDB
+    if db, ok := MysqlDbMap[dataSourceName]; ok {
+        this.DB = db
         return true
     }
     return false
@@ -191,20 +181,20 @@ func (this *DbMysql) SetCondition(condition *Condition) *DbMysql {
     return this
 }
 
-func (this *DbMysql) Close()  {
+func (this *DbMysql) Close() {
     this.DB = nil
 }
 
 /**
  * 设置查询字段
  */
-func (this *DbMysql) Select(args... string) *DbMysql {
+func (this *DbMysql) Select(args ...string) *DbMysql {
     fields := []string{}
-    for _, v := range(args) {
+    for _, v := range args {
         ary := strings.Split(v, ",")
         fields = append(fields, ary...)
     }
-    for k, v := range(fields) {
+    for k, v := range fields {
         v = strings.Trim(v, " ")
         fields[k] = v
     }
@@ -228,9 +218,9 @@ func (this *DbMysql) Order(order string) *DbMysql {
     return this
 }
 
-func (this *DbMysql) Limit(limit... int) *DbMysql {
+func (this *DbMysql) Limit(limit ...int) *DbMysql {
     tmp := make([]string, len(limit))
-    for i, v := range(limit) {
+    for i, v := range limit {
         tmp[i] = strconv.Itoa(v)
     }
     this.limit = strings.Join(tmp, ",")
@@ -339,7 +329,7 @@ func (this *DbMysql) SetNotUseField(s string) *DbMysql {
     return this
 }
 
-// data 可以是map[string]string   也可以是一个struct 必须指明tag field 才会更新
+// data 可以是map[string]interface{}   也可以是一个struct 必须指明tag field 才会更新
 // struct {
 //     Id      int8         `field:"id"`
 //     Name    string       `field:"name"`
@@ -389,7 +379,6 @@ func (this *DbMysql) Query(sql string, args ...interface{}) (Values, error) {
     if err := this.Connect(); err != nil {
         return nil, err
     }
-    this.DB.FreshLastUseTime()
     lastSql := &ExecSql{sql, args}
     logWrite(*lastSql)
     this.setLastSql(lastSql)
@@ -412,7 +401,6 @@ func (this *DbMysql) Exec(sql string, args ...interface{}) (int, error) {
     if err := this.Connect(); err != nil {
         return 0, err
     }
-    this.DB.FreshLastUseTime()
     lastSql := &ExecSql{sql, args}
     logWrite(*lastSql)
     this.setLastSql(lastSql)
@@ -435,11 +423,11 @@ func (this *DbMysql) Exec(sql string, args ...interface{}) (int, error) {
 func (this *DbMysql) getUpdateSql(data map[string]string) (string, []interface{}) {
     sql := "update " + this.wTableName + " set"
     exeArgs := []interface{}{}
-    for k, v := range(data) {
+    for k, v := range data {
         sql += " `" + k + "` = ?,"
         exeArgs = append(exeArgs, v)
     }
-    sql = string([]byte(sql)[:len(sql) - 1])
+    sql = string([]byte(sql)[:len(sql)-1])
     whereSql, whereExeArgs := this.getWhereSql(this.where)
     if whereSql != "" {
         sql += " where " + whereSql
@@ -471,13 +459,13 @@ func (this *DbMysql) getInsertSql(data map[string]string) (string, []interface{}
     exeArgs := []interface{}{}
     fields := []string{}
     values := []string{}
-    for k, v := range(data) {
+    for k, v := range data {
         fields = append(fields, k)
         exeArgs = append(exeArgs, v)
         values = append(values, "?")
     }
     sql := "insert into " + this.wTableName + " (`" + strings.Join(fields, "`,`") + "`) values (" + strings.Join(values, ",") + ")"
-    return sql, exeArgs;
+    return sql, exeArgs
 }
 
 func (this *DbMysql) getDelSql() (string, []interface{}) {
@@ -491,7 +479,7 @@ func (this *DbMysql) getDelSql() (string, []interface{}) {
 
 // 是否启用子查询查询总条数
 func (this *DbMysql) getCountSql(isSubqueries bool) (string, []interface{}) {
-    if (isSubqueries) {
+    if isSubqueries {
         sql, exeArgs := this.getSelectSql(false)
         sql = "select count(1) as num from (" + sql + ") as tb"
         return sql, exeArgs
@@ -513,7 +501,7 @@ func (this *DbMysql) getSelectSql(isCount bool) (string, []interface{}) {
     table := this.wTableName
     whereSql, exeArgs := this.getWhereSql(this.where)
     havingWhereSql, havingExeArgs := this.getHavingSql(this.having)
-    sql := "select " + s + " from " + table;
+    sql := "select " + s + " from " + table
     if this.join != "" {
         sql += " " + this.join + " "
     }
@@ -555,7 +543,6 @@ func (this *DbMysql) getHavingSql(condition map[string]interface{}) (string, []i
     return whereSql, args
 }
 
-
 func (this *DbMysql) parseSql(condition map[string]interface{}) (string, []interface{}) {
     args := []interface{}{}
     whereAry := []string{}
@@ -563,15 +550,15 @@ func (this *DbMysql) parseSql(condition map[string]interface{}) (string, []inter
     for k, v := range condition {
         k = strings.Trim(k, " ")
         tmpAryKey = []string{}
-        for _, vv := range(strings.Split(k, " ")) {
+        for _, vv := range strings.Split(k, " ") {
             if vv != "" {
                 tmpAryKey = append(tmpAryKey, vv)
             }
         }
         if len(tmpAryKey) == 1 {
-            whereAry = append(whereAry, tmpAryKey[0] + " = ?")
+            whereAry = append(whereAry, tmpAryKey[0]+" = ?")
         } else {
-            whereAry = append(whereAry, tmpAryKey[0] + " " + tmpAryKey[1] + " ?")
+            whereAry = append(whereAry, tmpAryKey[0]+" "+tmpAryKey[1]+" ?")
         }
         args = append(args, v)
     }
@@ -639,8 +626,8 @@ func (this *DbMysql) clear() {
 }
 
 type Condition struct {
-    whereSql	string
-    args		[]interface{}
+    whereSql string
+    args     []interface{}
 }
 
 // 设置搜索条件
@@ -660,7 +647,7 @@ func (this *Condition) SetFilterEx(key string, ex string, val interface{}) error
         sql += " " + ex + " ?"
         args = append(args, val)
     case []interface{}:
-        sql += " in ("
+        sql += " " + ex + " ("
         strAry := val.([]interface{})
         for i, v := range strAry {
             if i == 0 {
@@ -755,7 +742,7 @@ func (this *Condition) GetSql() (string, []interface{}) {
     return this.whereSql, this.args
 }
 
-func NewCondition () *Condition {
+func NewCondition() *Condition {
     return new(Condition)
 }
 
@@ -807,7 +794,7 @@ func toString(data interface{}) map[string]string {
             fv := v.Field(i)
             ft := t.Field(i)
             field := ft.Tag.Get("field")
-            if field != "" && field != "-"{
+            if field != "" && field != "-" {
                 switch ft.Type.Kind() {
                 case reflect.Int, reflect.Int64, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
                     v := fv.Int()
