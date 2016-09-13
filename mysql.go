@@ -810,6 +810,9 @@ func toString(data interface{}) map[string]string {
                     } else {
                         val[field] = "0"
                     }
+                case reflect.Interface:
+                    v := fv.Interface()
+                    val[field] = f(v)
                 }
             }
         }
